@@ -13,6 +13,12 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_approval_step_document", columnList = "document_id"),
                 @Index(name = "idx_approval_step_status", columnList = "status")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_approval_step_order",
+                        columnNames = {"document_id", "step_order"}
+                )
         }
 )
 @Getter

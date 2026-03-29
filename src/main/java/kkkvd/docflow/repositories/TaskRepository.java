@@ -17,10 +17,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findByAssignedByOrderByCreatedAtDesc(User assignedBy);
 
-    @Query("""
-            SELECT t FROM Task t
-            WHERE t.deadline < :today
-                AND t.status NOT IN ('COMPLETED', 'CANCELLED')
-""")
+    @Query("SELECT t FROM Task t " +
+            "WHERE t.deadline < :today " +
+            "AND t.status NOT IN ('COMPLETED', 'CANCELLED')")
     List<Task> findOverdue(@Param("today") LocalDate today);
 }

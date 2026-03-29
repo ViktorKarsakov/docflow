@@ -20,24 +20,19 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
 
     List<Document> findByAuthorAndStatusOrderByCreatedAtDesc(User author, Document.DocumentStatus status);
 
-    @Query("""
-            SELECT DISTINCT d FROM Document d
-            JOIN ApprovalStep s ON s.document = d
-            WHERE s.status = 'ACTIVE'
-                AND (s.assigneeUser = :user
-                    OR (s.assigneeUser IS NULL 
-                        AND s.assignedRole IN :roles))
-            ORDER BY d.submittedAt DESC
-""")
+    @Query("SELECT DISTINCT d FROM Document d " +
+            "JOIN ApprovalStep s ON s.document = d " +
+            "WHERE s.status = 'ACTIVE' " +
+            "AND (s.assigneeUser = :user " +
+            "OR (s.assigneeUser IS NULL AND s.assignedRole IN :roles)) " +
+            "ORDER BY d.submittedAt DESC")
     List<Document> findPendingForUser(@Param("user") User user,
                                       @Param("roles")Set<Role> roles);
 
     List<Document> findAllByOrderByCreatedAtDesc();
 
-    @Query("""
-            SELECT d FROM Document d
-            WHERE d.deadline < :today
-                AND d.status NOT IN ('APPROVED', 'COMPLETED', 'REJECTED', 'WITHDRAWN')
-""")
+    @Query("SELECT d FROM Document d " +
+            "WHERE d.deadline < :today " +
+            "AND d.status NOT IN ('APPROVED', 'COMPLETED', 'REJECTED', 'WITHDRAWN')")
     List<Document> findOverdue(@Param("today")LocalDate today);
 }

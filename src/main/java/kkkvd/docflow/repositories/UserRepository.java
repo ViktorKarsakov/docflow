@@ -19,14 +19,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByDepartmentAndActiveTrue(Department department);
 
-    @Query("""
-            SELECT u FROM User u
-            WHERE u.active = true
-                AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) 
-                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))
-                OR LOWER(u.position) LIKE LOWER(CONCAT('%', :query, '%')))
-            ORDER BY u.fullName ASC 
-""")
+    @Query("SELECT u FROM User u " +
+            "WHERE u.active = true " +
+            "AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(u.position) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+            "ORDER BY u.fullName ASC")
     List<User> searchByName(@Param("query") String query);
 
     @Query(
