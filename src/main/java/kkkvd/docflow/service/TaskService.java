@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,6 +32,14 @@ public class TaskService {
     public TaskResponse create(TaskRequest request, User assignedBy) {
         User assignedTo = userRepository.findById(request.getAssignedToId())
                 .orElseThrow(() -> new RuntimeException("Исполнитель не найден"));
+
+        //проверка дедлайна — нельзя создать поручение с датой в прошлом
+        if (request.getDeadline() == null) {
+            throw new RuntimeException("Срок исполнения обязателен");
+        }
+        if (request.getDeadline().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Срок исполнения не может быть в прошлом");
+        }
 
         Task task = new Task();
         task.setTitle(request.getTitle());
@@ -130,6 +139,20 @@ public class TaskService {
             throw new RuntimeException("Отменить поручение может только тот, кто его выдал");
         }
         task.setStatus(Task.TaskStatus.CANCELLED);
+
+        notificationService.send(
+                task.getAssignedTo(),
+                "Поручение отменено",
+                "Поручение «" + task.getTitle() + "» было отменено.",
+                Notification.NotificationType.INFO,
+                "/tasks/" + task.getId()
+        );
+        notificationService.sendEmail(
+                task.getAssignedTo().getEmail(),
+                "Поручение отменено — " + task.getTitle(),
+                "<p>Поручение <b>«" + task.getTitle() + "»</b> было отменено.</p>"
+        );
+
         return TaskResponse.fromEntity(taskRepository.save(task));
     }
 

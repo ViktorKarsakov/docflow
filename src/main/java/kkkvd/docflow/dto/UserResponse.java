@@ -31,7 +31,7 @@ public class UserResponse {
                 .position(user.getPosition())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .departmentName(user.getDepartment().getName() != null ? user.getDepartment().getName() : null)
+                .departmentName(user.getDepartment() != null ? user.getDepartment().getName() : null)
                 .departmentId(user.getDepartment() != null ? user.getDepartment().getId() : null)
                 .roles(user.getRoles().stream()
                         .map(r -> r.getName())

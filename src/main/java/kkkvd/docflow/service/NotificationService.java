@@ -8,7 +8,6 @@ import kkkvd.docflow.entities.User;
 import kkkvd.docflow.repositories.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.MailSender;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -28,7 +27,6 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final JavaMailSender javaMailSender;
-    private final MailSender mailSender;
 
     // Создать внутреннее уведомление для пользователя.
     // Вызывается из DocumentService при каждом событии документа.
@@ -95,7 +93,9 @@ public class NotificationService {
              helper.setText(htmlBody, true);
              javaMailSender.send(message);
          } catch (MessagingException e) {
-             log.warn("Не удалось отправить email на {}: {}",  toEmail, e.getMessage());
+             log.warn("Ошибка формирования письма для {}: {}", toEmail, e.getMessage());
+         } catch (Exception e) {
+             log.warn("Не удалось отправить email на {}: {}", toEmail, e.getMessage());
          }
     }
 }

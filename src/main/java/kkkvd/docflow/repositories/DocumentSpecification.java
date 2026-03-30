@@ -112,7 +112,7 @@ public class DocumentSpecification {
                 predicates.add(cb.lessThan(root.get("deadline"), LocalDate.now()));
                 predicates.add(root.get("status").in(
                         Document.DocumentStatus.DRAFT,
-                        Document.DocumentStatus.APPROVED,
+                        Document.DocumentStatus.ON_APPROVAL,
                         Document.DocumentStatus.ON_EXECUTION
                 ));
             }
@@ -129,7 +129,7 @@ public class DocumentSpecification {
                 query.orderBy(cb.desc(root.get("createdAt")));
             }
 
-            return cb.and(predicates.toArray(predicates.toArray(new Predicate[0])));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 

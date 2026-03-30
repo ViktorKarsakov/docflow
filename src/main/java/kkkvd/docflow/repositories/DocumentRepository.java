@@ -1,8 +1,6 @@
 package kkkvd.docflow.repositories;
 
-import kkkvd.docflow.entities.Document;
-import kkkvd.docflow.entities.Role;
-import kkkvd.docflow.entities.User;
+import kkkvd.docflow.entities.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -23,11 +21,15 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
     @Query("SELECT DISTINCT d FROM Document d " +
             "JOIN ApprovalStep s ON s.document = d " +
             "WHERE s.status = 'ACTIVE' " +
-            "AND (s.assigneeUser = :user " +
-            "OR (s.assigneeUser IS NULL AND s.assignedRole IN :roles)) " +
+            "AND (" +
+            "    s.assigneeUser = :user " +
+            "    OR (s.assigneeDepartment = :department AND :department IS NOT NULL) " +
+            "    OR (s.assigneeUser IS NULL AND s.assigneeDepartment IS NULL AND s.assignedRole IN :roles)" +
+            ") " +
             "ORDER BY d.submittedAt DESC")
     List<Document> findPendingForUser(@Param("user") User user,
-                                      @Param("roles")Set<Role> roles);
+                                      @Param("department") Department department,
+                                      @Param("roles") Set<Role> roles);
 
     List<Document> findAllByOrderByCreatedAtDesc();
 
@@ -35,4 +37,16 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
             "WHERE d.deadline < :today " +
             "AND d.status NOT IN ('APPROVED', 'COMPLETED', 'REJECTED', 'WITHDRAWN')")
     List<Document> findOverdue(@Param("today")LocalDate today);
+
+    //поиск только персональных шагов — для замещения.
+    // Заместитель видит только те документы где шаг назначен
+    // конкретному сотруднику (assigneeUser), но не отделу и не роли.
+    @Query("SELECT DISTINCT d FROM Document d " +
+            "JOIN ApprovalStep s ON s.document = d " +
+            "WHERE s.status = 'ACTIVE' " +
+            "AND s.assigneeUser = :user " +
+            "ORDER BY d.submittedAt DESC")
+    List<Document> findPendingPersonalForUser(@Param("user") User user);
+
+    long countByDocumentTypeAndSubmissionCountGreaterThan(DocumentType documentType, int count);
 }
