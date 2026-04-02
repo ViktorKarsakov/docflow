@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DocumentController {
     private final DocumentService documentService;
-    private UserService userService;
+    private final UserService userService;
 
     // Создание и редактирование
 

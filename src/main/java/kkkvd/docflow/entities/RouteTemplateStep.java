@@ -39,6 +39,10 @@ public class RouteTemplateStep {
     private ApprovalStep.StepType stepType = ApprovalStep.StepType.APPROVAL;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_user_id")
+    private User assignedUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_role_id", nullable = false)
     private Role assignedRole;
 

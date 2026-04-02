@@ -87,6 +87,7 @@ public class DocumentService {
             step.setStepOrder(templateStep.getStepOrder());
             step.setStepName(templateStep.getStepName());
             step.setStepType(templateStep.getStepType());
+            step.setAssigneeUser(templateStep.getAssignedUser());
             step.setAssignedRole(templateStep.getAssignedRole());
             step.setAssigneeDepartment(templateStep.getAssignedDepartment());
             step.setStatus(ApprovalStep.StepStatus.PENDING);
