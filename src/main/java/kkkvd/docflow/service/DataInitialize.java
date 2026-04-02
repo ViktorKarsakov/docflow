@@ -3,6 +3,7 @@ package kkkvd.docflow.service;
 import kkkvd.docflow.entities.Department;
 import kkkvd.docflow.entities.DocumentType;
 import kkkvd.docflow.entities.Role;
+import kkkvd.docflow.entities.User;
 import kkkvd.docflow.repositories.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 // Инициализация начальных данных.
 // Запускается автоматически при старте приложения (реализует ApplicationRunner).
@@ -27,7 +29,6 @@ public class DataInitialize implements ApplicationRunner {
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
     private final DocumentTypeRepository documentTypeRepository;
-    private final RouteTemplateRepository routeTemplateRepository;
     private final PasswordEncoder passwordEncoder;
 
     // пароль администратора берётся из переменной окружения ADMIN_PASSWORD.
@@ -41,7 +42,12 @@ public class DataInitialize implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-
+        log.info("Запуск инициализации начальных данных...");
+        initRoles();
+        initDepartments();
+        initDocumentTypes();
+        initAdminUser();
+        log.info("Инициализация завершена. Войдите как 'admin' и настройте маршруты согласования.");
     }
 
     // Роли
@@ -121,5 +127,25 @@ public class DataInitialize implements ApplicationRunner {
         dt.setSortOrder(sortOrder);
         dt.setActive(true);
         return dt;
+    }
+
+    // Первый администратор
+    private void initAdminUser() {
+        if (userRepository.count() > 0) return;
+
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
+        Department itDept = departmentRepository.findByCode("IT").orElseThrow();
+
+        User admin = new User();
+        admin.setUsername("admin");
+        admin.setPassword(passwordEncoder.encode(adminPassword));
+        admin.setFullName("Администратор системы");
+        admin.setPosition("Инженер-программист");
+        admin.setDepartment(itDept);
+        admin.setRoles(Set.of(adminRole));
+        admin.setActive(true);
+
+        userRepository.save(admin);
+        log.info("Создан администратор. Логин: admin — смените пароль после первого входа!");
     }
 }
