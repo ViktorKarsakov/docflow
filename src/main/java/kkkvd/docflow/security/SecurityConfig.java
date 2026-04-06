@@ -28,33 +28,31 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Статические файлы (CSS, JS, картинки) — доступны всем без входа
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         // Страница входа — доступна всем
-                        .requestMatchers("/login", "/login/**").permitAll()
+                        .requestMatchers("/pages/login.html").permitAll()
                         // Всё остальное — только авторизованным пользователям
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         // URL страницы входа (фронтенд отдаёт /static/login.html, а Spring слушает здесь)
-                        .loginPage("/login")
+                        .loginPage("/pages/login.html")
                         // URL куда фронтенд отправляет форму (POST с username и password)
                         .loginProcessingUrl("/login")
                         // Куда перенаправить после успешного входа
-                        .defaultSuccessUrl("/", true)
+                        .defaultSuccessUrl("/pages/dashboard.html", true)
                         // Куда перенаправить при неверном логине/пароле
-                        .failureUrl("/login?error=true")
+                        .failureUrl("/pages/login.html?error=true")
                         .permitAll()
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout=true")
+                        .logoutSuccessUrl("/pages/login.html?logout=true")
                         .permitAll()
-                )
-                // Отключаем CSRF только для REST API эндпоинтов (фронтенд на HTML+JS)
-                // Для полноценного REST API CSRF обычно отключают полностью
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"));
+                );
 
         return http.build();
     }
