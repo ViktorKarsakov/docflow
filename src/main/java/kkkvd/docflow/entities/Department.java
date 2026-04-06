@@ -25,5 +25,8 @@ public class Department {
     @Column(length = 100)
     private String city;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
 
 }
