@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мои документы — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/documents.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Мои документы</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Мои документы</div>
+          <div class="page-subtitle">Документы которые вы создали</div>
+        </div>
+        <div class="page-header-actions">
+          <a href="/pages/document-create.html" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Создать документ
+          </a>
+        </div>
+      </div>
+
+      <!-- Фильтры -->
+      <div class="filter-bar">
+        <div class="search-field">
+          <i class="bi bi-search"></i>
+          <input type="text" class="form-control" placeholder="Поиск по теме..." id="search-input">
+        </div>
+        <select class="form-control filter-select" id="filter-status">
+          <option value="">Все статусы</option>
+          <option value="DRAFT">Черновик</option>
+          <option value="ON_APPROVAL">На согласовании</option>
+          <option value="APPROVED">Согласован</option>
+          <option value="ON_EXECUTION">На исполнении</option>
+          <option value="COMPLETED">Завершён</option>
+          <option value="REJECTED">Отклонён</option>
+          <option value="WITHDRAWN">Отозван</option>
+        </select>
+        <button class="btn btn-secondary" onclick="applyFilters()">
+          <i class="bi bi-funnel"></i> Применить
+        </button>
+        <button class="btn btn-ghost" onclick="clearFilters()">Сбросить</button>
+      </div>
+
+      <div class="card">
+        <div id="docs-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/documents.js"></script>
+<script>
+let _allDocs = [];
+
+(async () => {
+  await Layout.init('Мои документы');
+  _allDocs = await API.documents.getMyDocuments().catch(() => []);
+  renderTable(_allDocs);
+})();
+
+function renderTable(docs) {
+  const container = document.getElementById('docs-container');
+  if (!docs.length) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-file-earmark-x"></i><p>Документов не найдено</p></div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr>
+          <th>Документ</th><th>Тип</th><th>Статус</th>
+          <th>Создан</th><th>Дедлайн</th><th></th>
+        </tr></thead>
+        <tbody>${docs.map(d => Documents.renderDocRow(d)).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function applyFilters() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  const status = document.getElementById('filter-status').value;
+  const filtered = _allDocs.filter(d => {
+    const matchQuery = !query || d.title.toLowerCase().includes(query) || (d.content || '').toLowerCase().includes(query);
+    const matchStatus = !status || d.status === status;
+    return matchQuery && matchStatus;
+  });
+  renderTable(filtered);
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-status').value = '';
+  renderTable(_allDocs);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Типы документов — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Типы документов</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Типы документов</div>
+          <div class="page-subtitle">Управление видами документов и их префиксами</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary" onclick="DocTypesAdmin.openCreate()">
+            <i class="bi bi-plus-lg"></i> Добавить тип
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Название</th><th>Код</th><th>Префикс</th><th>Статус</th><th></th></tr>
+            </thead>
+            <tbody id="doctypes-table-body">
+              <tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка типа документа -->
+<div class="modal-overlay hidden" id="doctype-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="doctype-modal-title">Тип документа</span>
+      <button class="modal-close" onclick="hideModal('doctype-modal')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="doctype-form" onsubmit="event.preventDefault()">
+        <div class="form-group">
+          <label class="form-label">Название <span class="required">*</span></label>
+          <input type="text" class="form-control" id="dt-displayName" required
+                 placeholder="Служебная записка на закупку">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Код <span class="required">*</span></label>
+            <input type="text" class="form-control" id="dt-code" required
+                   placeholder="MEMO_PURCHASE">
+            <div class="form-hint">Латиницей, без пробелов</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Префикс <span class="required">*</span></label>
+            <input type="text" class="form-control" id="dt-prefix" required
+                   placeholder="СЗЗ" maxlength="10">
+            <div class="form-hint">Для рег. номера: СЗЗ-2026-0001</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-control" id="dt-description" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Порядок сортировки</label>
+          <input type="number" class="form-control" id="dt-sortOrder" value="0" min="0">
+          <div class="form-hint">Меньше — выше в списке</div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('doctype-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="DocTypesAdmin.save()">
+        <i class="bi bi-floppy"></i> Сохранить
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/admin/doc-types.js"></script>
+<script>
+(async () => {
+  await Layout.init('Типы документов');
+  await DocTypesAdmin.load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Пользователи — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Пользователи</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Управление пользователями</div>
+          <div class="page-subtitle">Создание, редактирование и управление доступом</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary" onclick="UsersAdmin.openCreate()">
+            <i class="bi bi-person-plus"></i> Добавить пользователя
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Пользователь</th>
+                <th>Должность</th>
+                <th>Отдел</th>
+                <th>Роли</th>
+                <th>Статус</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка создания/редактирования -->
+<div class="modal-overlay hidden" id="user-modal">
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Пользователь</span>
+      <button class="modal-close" onclick="hideModal('user-modal')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="user-form" onsubmit="event.preventDefault()">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Логин <span class="required">*</span></label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+          <div class="form-group" id="field-password">
+            <label class="form-label">Пароль <span class="required">*</span></label>
+            <input type="password" name="password" class="form-control" minlength="6">
+            <div class="form-hint">При редактировании — оставьте пустым чтобы не менять</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ФИО <span class="required">*</span></label>
+          <input type="text" name="fullName" class="form-control" required placeholder="Фамилия Имя Отчество">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Должность <span class="required">*</span></label>
+            <input type="text" name="position" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Отдел</label>
+            <select name="departmentId" class="form-control" id="form-dept"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Телефон</label>
+            <input type="text" name="phone" class="form-control" placeholder="+7 (000) 000-00-00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Роли <span class="required">*</span></label>
+          <div id="form-roles" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('user-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="UsersAdmin.save()">
+        <i class="bi bi-floppy"></i> Сохранить
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/admin/users.js"></script>
+<script>
+(async () => {
+  await Layout.init('Пользователи');
+  await UsersAdmin.init();
+})();
+</script>
+</body>
+</html>

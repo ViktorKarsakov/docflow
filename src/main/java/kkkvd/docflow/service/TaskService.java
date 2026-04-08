@@ -98,6 +98,12 @@ public class TaskService {
     public TaskResponse startProgress(Long taskId, User currentUser) {
         Task task = getTaskOrThrow(taskId);
         checkAssignee(task, currentUser);
+
+        // Проверка статуса.
+        if (task.getStatus() != Task.TaskStatus.NEW) {
+            throw new RuntimeException("Взять в работу можно только новое поручение");
+        }
+
         task.setStatus(Task.TaskStatus.IN_PROGRESS);
         return TaskResponse.fromEntity(taskRepository.save(task));
     }
@@ -107,6 +113,11 @@ public class TaskService {
     public TaskResponse complete(Long taskId, String report, User currentUser) {
         Task task = getTaskOrThrow(taskId);
         checkAssignee(task, currentUser);
+
+        // Проверка статуса.
+        if (task.getStatus() != Task.TaskStatus.IN_PROGRESS && task.getStatus() != Task.TaskStatus.NEW) {
+            throw new RuntimeException("Завершить можно только активное поручение");
+        }
         task.setStatus(Task.TaskStatus.COMPLETED);
         task.setReport(report);
         task.setCompletedAt(LocalDateTime.now());
@@ -137,6 +148,11 @@ public class TaskService {
         Task task = getTaskOrThrow(taskId);
         if (!task.getAssignedBy().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Отменить поручение может только тот, кто его выдал");
+        }
+
+        // Проверка статуса.
+        if (task.getStatus() == Task.TaskStatus.COMPLETED || task.getStatus() == Task.TaskStatus.CANCELLED) {
+            throw new RuntimeException("Нельзя отменить завершённое или уже отменённое поручение");
         }
         task.setStatus(Task.TaskStatus.CANCELLED);
 

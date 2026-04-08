@@ -18,6 +18,7 @@ public class ApprovalStepResponse {
     private String assignedRoleName;
     private String assignedRoleDisplayName;
     private String assigneeDepartmentName;
+    private String assigneeUserFullName;
     private String status;
     private String statusDisplayName;
     private String processedByFullName;
@@ -32,9 +33,10 @@ public class ApprovalStepResponse {
                 .stepName(step.getStepName())
                 .stepType(step.getStepType().name())
                 .stepTypeDisplayName(step.getStepType().getDisplayName())
-                .assignedRoleName(step.getAssignedRole().getName())
-                .assignedRoleDisplayName(step.getAssignedRole().getDisplayName())
+                .assignedRoleName(step.getAssignedRole() != null ? step.getAssignedRole().getName() : null)
+                .assignedRoleDisplayName(step.getAssignedRole() != null ? step.getAssignedRole().getDisplayName() : null)
                 .assigneeDepartmentName(step.getAssigneeDepartment() != null ? step.getAssigneeDepartment().getName() : null)
+                .assigneeUserFullName(step.getAssigneeUser() != null ? step.getAssigneeUser().getFullName() : null)
                 .status(step.getStatus().name())
                 .statusDisplayName(step.getStatus().getDisplayName())
                 .processedByFullName(step.getProcessedBy() != null ? step.getProcessedBy().getFullName() : null)

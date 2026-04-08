@@ -2,6 +2,7 @@ package kkkvd.docflow.service;
 
 import kkkvd.docflow.dto.RouteTemplateDto;
 import kkkvd.docflow.dto.RouteTemplateRequest;
+import kkkvd.docflow.dto.RouteTemplateStepRequest;
 import kkkvd.docflow.entities.ApprovalStep;
 import kkkvd.docflow.entities.DocumentType;
 import kkkvd.docflow.entities.RouteTemplate;
@@ -103,6 +104,9 @@ public class RouteTemplateService {
 
             // Перебираем каждый шаг из запроса (var — это RouteTemplateStepRequest)
             for (var sr : request.getSteps()) {
+                //Валидация — у каждого шага должен быть ровно один способ назначения.
+                validateAssignment(sr);
+
                 RouteTemplateStep step = new RouteTemplateStep();
                 // Привязываем шаг к шаблону (нужно для @ManyToOne в сущности)
                 step.setRouteTemplate(template);
@@ -137,5 +141,21 @@ public class RouteTemplateService {
         }
 
         return template;
+    }
+
+    // Проверяет что у шага заполнено ровно одно поле назначения.
+    private void validateAssignment(RouteTemplateStepRequest sr) {
+        int count = 0;
+        if (sr.getAssignedRoleId() != null) count++;
+        if (sr.getAssignedDepartmentId() != null) count++;
+        if (sr.getAssignedUserId() != null) count++;
+
+        if (count == 0) {
+            throw new RuntimeException("Шаг «" + sr.getStepName() + "»: необходимо указать роль, отдел или сотрудника");
+        }
+
+        if (count > 1) {
+            throw new RuntimeException("Шаг «" + sr.getStepName() + "»: можно указать только один способ назначения — роль, отдел или сотрудника");
+        }
     }
 }

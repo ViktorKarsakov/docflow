@@ -37,6 +37,19 @@ public class SecurityConfig {
                         // Всё остальное — только авторизованным пользователям
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                // API запросы получают 401 JSON, а не редирект на страницу
+                                response.setStatus(401);
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                            } else {
+                                // Остальные запросы редиректятся на логин
+                                response.sendRedirect("/pages/login.html");
+                            }
+                        })
+                )
                 .formLogin(form -> form
                         // URL страницы входа (фронтенд отдаёт /static/login.html, а Spring слушает здесь)
                         .loginPage("/pages/login.html")

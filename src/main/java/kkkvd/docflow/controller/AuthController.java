@@ -29,6 +29,9 @@ public class AuthController {
     // Фронтенд вызывает этот метод при загрузке любой страницы.
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
         User user = userService.findEntityByUsername(userDetails.getUsername());
         return ResponseEntity.ok(UserResponse.fromEntity(user));
     }

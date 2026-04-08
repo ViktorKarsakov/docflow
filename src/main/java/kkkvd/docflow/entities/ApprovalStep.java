@@ -49,7 +49,7 @@ public class ApprovalStep {
     private int stepOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_role_id", nullable = false)
+    @JoinColumn(name = "assigned_role_id")
     private Role assignedRole;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Маршруты согласования — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Маршруты согласования</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content" style="padding-bottom:0">
+      <div class="page-header" style="margin-bottom:1rem">
+        <div class="page-header-left">
+          <div class="page-title">Конструктор маршрутов</div>
+          <div class="page-subtitle">Визуальная настройка цепочек согласования документов</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary" onclick="RouteBuilder.newTemplate()">
+            <i class="bi bi-plus-lg"></i> Новый маршрут
+          </button>
+          <button class="btn btn-primary" onclick="RouteBuilder.openSaveModal()">
+            <i class="bi bi-floppy"></i> Сохранить
+          </button>
+        </div>
+      </div>
+
+      <!-- Конструктор -->
+      <div class="route-builder-layout">
+
+        <!-- Левая панель: палитра элементов -->
+        <div class="builder-palette">
+          <div class="palette-header">Элементы</div>
+          <div id="palette-items"></div>
+
+          <div style="border-top:1px solid var(--border);padding:0.75rem">
+            <div class="palette-section-title">Шаблоны маршрутов</div>
+            <div id="template-list"></div>
+          </div>
+        </div>
+
+        <!-- Центральная область: канвас -->
+        <div class="builder-canvas-wrap">
+          <!-- Панель инструментов -->
+          <div class="builder-toolbar">
+            <button class="btn btn-ghost btn-sm btn-icon" onclick="RouteBuilder.clearCanvas()" title="Очистить">
+              <i class="bi bi-trash"></i>
+            </button>
+            <div style="width:1px;height:20px;background:var(--border);margin:0 0.1rem"></div>
+            <span style="font-size:0.72rem;color:var(--text-muted);padding:0 0.25rem">
+              Перетащите шаг с панели · Клик по ● для соединения
+            </span>
+          </div>
+
+          <!-- Рабочая область -->
+          <div id="builder-canvas" class="builder-canvas">
+            <!-- SVG для стрелок -->
+            <svg id="builder-svg" class="builder-svg">
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" class="connection-arrow"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+
+          <div class="builder-hint" id="builder-hint">
+            Перетащите шаг с левой панели на рабочую область
+          </div>
+        </div>
+
+        <!-- Правая панель: свойства -->
+        <div class="builder-props">
+          <div class="props-header">Свойства шага</div>
+          <div class="props-body" id="props-body">
+            <div class="props-empty">
+              <i class="bi bi-cursor"></i>
+              Выберите блок для редактирования
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка сохранения шаблона -->
+<div class="modal-overlay hidden" id="save-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Сохранить маршрут</span>
+      <button class="modal-close" onclick="hideModal('save-modal')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Название маршрута <span class="required">*</span></label>
+        <input type="text" class="form-control" id="save-name"
+               placeholder="Стандартный маршрут — закупки">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тип документа <span class="required">*</span></label>
+        <select class="form-control" id="save-doc-type">
+          <option value="">— Выберите тип —</option>
+        </select>
+        <div class="form-hint">Этот маршрут будет применяться для выбранного типа</div>
+      </div>
+
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <div>
+          <strong>Порядок шагов</strong> определяется соединениями стрелками.
+          Шаг без входящих стрелок — первый в маршруте.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('save-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="RouteBuilder.saveTemplate()">
+        <i class="bi bi-floppy"></i> Сохранить маршрут
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/admin/route-builder.js"></script>
+<script>
+(async () => {
+  await Layout.init('Маршруты');
+  await RouteBuilder.init();
+})();
+</script>
+</body>
+</html>

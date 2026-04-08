@@ -1,6 +1,7 @@
 package kkkvd.docflow.repositories;
 
 import kkkvd.docflow.entities.Department;
+import kkkvd.docflow.entities.Role;
 import kkkvd.docflow.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -32,4 +33,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "r.name = :roleName AND u.active = true"
     )
     List<User> findByRoleName(@Param("roleName") String roleName);
+
+    long countByRolesContaining(Role role);
 }

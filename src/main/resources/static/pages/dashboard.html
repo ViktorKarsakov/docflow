@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Дашборд — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Дашборд</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn" title="Уведомления">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Добро пожаловать</div>
+          <div class="page-subtitle" id="user-greeting">Загрузка...</div>
+        </div>
+        <div class="page-header-actions">
+          <a href="/pages/document-create.html" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Новый документ
+          </a>
+        </div>
+      </div>
+
+      <!-- Статистика — карточки кликабельны -->
+      <div id="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
+        <a href="/pages/documents-my.html" class="stat-card" style="text-decoration:none;cursor:pointer;transition:box-shadow var(--transition)" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
+          <div class="stat-icon blue"><i class="bi bi-file-text"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-my">—</div>
+            <div class="stat-label">Мои документы</div>
+          </div>
+        </a>
+        <a href="/pages/documents-inbox.html" class="stat-card" style="text-decoration:none;cursor:pointer;transition:box-shadow var(--transition)" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
+          <div class="stat-icon orange"><i class="bi bi-inbox"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-inbox">—</div>
+            <div class="stat-label">Ожидают решения</div>
+          </div>
+        </a>
+        <a href="/pages/tasks.html" class="stat-card" style="text-decoration:none;cursor:pointer;transition:box-shadow var(--transition)" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
+          <div class="stat-icon green"><i class="bi bi-check2-square"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-tasks">—</div>
+            <div class="stat-label">Активные поручения</div>
+          </div>
+        </a>
+        <a href="/pages/documents-my.html" class="stat-card" style="text-decoration:none;cursor:pointer;transition:box-shadow var(--transition)" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
+          <div class="stat-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="stat-overdue">—</div>
+            <div class="stat-label">Просрочено</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Быстрые действия -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+        <!-- Входящие -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="bi bi-inbox" style="color:var(--warning)"></i> Входящие документы</span>
+            <a href="/pages/documents-inbox.html" class="btn btn-ghost btn-sm">Все <i class="bi bi-arrow-right"></i></a>
+          </div>
+          <div class="card-body" id="inbox-preview">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Мои поручения -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="bi bi-check2-square" style="color:var(--success)"></i> Мои поручения</span>
+            <a href="/pages/tasks.html" class="btn btn-ghost btn-sm">Все <i class="bi bi-arrow-right"></i></a>
+          </div>
+          <div class="card-body" id="tasks-preview">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+
+<script>
+(async () => {
+  const user = await Layout.init('Дашборд');
+  if (!user) return;
+
+  document.getElementById('user-greeting').textContent =
+    `${user.fullName} — ${user.departmentName || ''}`;
+
+  // Загружаем статистику параллельно
+  const [myDocs, inbox, tasks] = await Promise.all([
+    API.documents.getMyDocuments().catch(() => []),
+    API.documents.getInbox().catch(() => []),
+    API.tasks.getMyTasks().catch(() => []),
+  ]);
+
+  document.getElementById('stat-my').textContent = myDocs.length;
+  document.getElementById('stat-inbox').textContent = inbox.length;
+  document.getElementById('stat-tasks').textContent = tasks.length;
+  document.getElementById('stat-overdue').textContent =
+    myDocs.filter(d => d.overdue).length + tasks.filter(t => t.overdue).length;
+
+  // Входящие preview
+  const inboxPreview = document.getElementById('inbox-preview');
+  if (!inbox.length) {
+    inboxPreview.innerHTML = '<div class="empty-state" style="padding:1.5rem"><i class="bi bi-inbox"></i><p>Нет входящих</p></div>';
+  } else {
+    inboxPreview.innerHTML = inbox.slice(0, 5).map(d => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border-light)">
+        <div>
+          <a href="/pages/document-view.html?id=${d.id}" style="font-weight:500;font-size:0.875rem;color:var(--text)">${d.title}</a>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${d.documentTypeName} · ${d.authorFullName}</div>
+        </div>
+        ${d.overdue ? '<i class="bi bi-exclamation-circle text-danger"></i>' : ''}
+      </div>
+    `).join('');
+  }
+
+  // Поручения preview
+  const tasksPreview = document.getElementById('tasks-preview');
+  if (!tasks.length) {
+    tasksPreview.innerHTML = '<div class="empty-state" style="padding:1.5rem"><i class="bi bi-check2-all"></i><p>Нет поручений</p></div>';
+  } else {
+    tasksPreview.innerHTML = tasks.slice(0, 5).map(t => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border-light)">
+        <div>
+          <div style="font-weight:500;font-size:0.875rem">${t.title}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">До ${formatDate(t.deadline)}</div>
+        </div>
+        ${taskStatusBadge(t.status)}
+      </div>
+    `).join('');
+  }
+})();
+</script>
+</body>
+</html>

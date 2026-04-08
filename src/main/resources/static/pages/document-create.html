@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Новый документ — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/documents.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Новый документ</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="/pages/documents-my.html">Мои документы</a>
+        <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+        <span class="breadcrumb-current">Новый документ</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Создание документа</div>
+          <div class="page-subtitle">Заполните форму и сохраните черновик или сразу отправьте на согласование</div>
+        </div>
+      </div>
+
+      <div class="create-layout">
+        <!-- Основная форма -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Содержание документа</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Тип документа <span class="required">*</span></label>
+              <select class="form-control" id="doc-type" required>
+                <option value="">— Выберите тип —</option>
+              </select>
+              <div class="form-hint" id="type-hint"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Тема / Заголовок <span class="required">*</span></label>
+              <input type="text" class="form-control" id="doc-title"
+                     placeholder="Кратко опишите суть документа" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Текст документа <span class="required">*</span></label>
+              <textarea class="form-control" id="doc-content" rows="10"
+                        placeholder="Введите текст документа..." required
+                        style="min-height:220px"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Адресат</label>
+              <input type="text" class="form-control" id="doc-addressee"
+                     placeholder="Например: Главному врачу КГБУЗ КККВД №1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Боковая панель -->
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-header">
+              <span class="card-title">Параметры</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Срок исполнения</label>
+                <input type="date" class="form-control" id="doc-deadline">
+                <div class="form-hint">Необязательно</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Маршрут согласования -->
+          <div class="card" id="route-preview-card" style="margin-bottom:1rem;display:none">
+            <div class="card-header">
+              <span class="card-title"><i class="bi bi-diagram-3" style="color:var(--blue)"></i> Маршрут согласования</span>
+            </div>
+            <div class="card-body" id="route-preview">
+              <div class="text-muted" style="font-size:0.82rem">Выберите тип документа</div>
+            </div>
+          </div>
+
+          <!-- Кнопки -->
+          <div class="card">
+            <div class="card-body">
+              <button class="btn btn-secondary" style="width:100%;margin-bottom:0.5rem"
+                      onclick="saveDraft()">
+                <i class="bi bi-floppy"></i> Сохранить черновик
+              </button>
+              <button class="btn btn-primary" style="width:100%"
+                      onclick="saveDraftAndSubmit()">
+                <i class="bi bi-send"></i> Отправить на согласование
+              </button>
+              <div class="form-hint" style="margin-top:0.5rem;text-align:center">
+                Черновик можно отредактировать и отправить позже
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/documents.js"></script>
+<script>
+let _docTypes = [];
+let _routeTemplates = [];
+
+(async () => {
+  await Layout.init('Новый документ');
+
+  // Загружаем типы документов и шаблоны маршрутов
+  [_docTypes, _routeTemplates] = await Promise.all([
+    API.documentTypes.getAll().catch(() => []),
+    API.routeTemplates.getAll().catch(() => []),
+  ]);
+
+  const select = document.getElementById('doc-type');
+  _docTypes.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.displayName;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener('change', onTypeChange);
+})();
+
+function onTypeChange() {
+  const typeId = Number(document.getElementById('doc-type').value);
+  const template = _routeTemplates.find(t => t.documentTypeId === typeId);
+  const card = document.getElementById('route-preview-card');
+  const preview = document.getElementById('route-preview');
+
+  if (template && template.steps?.length) {
+    card.style.display = '';
+    const stepTypeIcon  = { APPROVAL: 'bi-check2', SIGNATURE: 'bi-pen', EXECUTION: 'bi-gear', RESOLUTION: 'bi-chat-left-dots' };
+    const stepTypeLabel = { APPROVAL: 'Согласование', SIGNATURE: 'Подпись', EXECUTION: 'Исполнение', RESOLUTION: 'Резолюция' };
+    preview.innerHTML = template.steps
+      .sort((a, b) => a.stepOrder - b.stepOrder)
+      .map((s, i) => `
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;${i < template.steps.length - 1 ? 'border-bottom:1px solid var(--border-light)' : ''}">
+          <span style="width:20px;height:20px;background:var(--blue-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:var(--blue);flex-shrink:0">${s.stepOrder}</span>
+          <div>
+            <div style="font-size:0.8rem;font-weight:500">${s.stepName}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${stepTypeLabel[s.stepType] || s.stepType}</div>
+          </div>
+        </div>
+      `).join('');
+  } else if (typeId) {
+    card.style.display = '';
+    preview.innerHTML = '<div class="text-muted" style="font-size:0.82rem"><i class="bi bi-exclamation-triangle text-warning"></i> Маршрут для этого типа не настроен. Обратитесь к администратору.</div>';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+function getFormData() {
+  return {
+    documentTypeId: Number(document.getElementById('doc-type').value) || null,
+    title:          document.getElementById('doc-title').value.trim(),
+    content:        document.getElementById('doc-content').value.trim(),
+    addressee:      document.getElementById('doc-addressee').value.trim() || null,
+    deadline:       document.getElementById('doc-deadline').value || null,
+  };
+}
+
+function validate() {
+  const data = getFormData();
+  if (!data.documentTypeId) { showToast('Выберите тип документа', 'error'); return false; }
+  if (!data.title)           { showToast('Введите тему документа', 'error'); return false; }
+  if (!data.content)         { showToast('Введите текст документа', 'error'); return false; }
+  return data;
+}
+
+async function saveDraft() {
+  const data = validate();
+  if (!data) return;
+  const doc = await Documents.createDraft(data);
+  if (doc) {
+    setTimeout(() => window.location.href = `/pages/document-view.html?id=${doc.id}`, 800);
+  }
+}
+
+async function saveDraftAndSubmit() {
+  const data = validate();
+  if (!data) return;
+  const doc = await Documents.createDraft(data);
+  if (!doc) return;
+  const ok = await Documents.submitDocument(doc.id);
+  if (ok) {
+    setTimeout(() => window.location.href = `/pages/document-view.html?id=${doc.id}`, 800);
+  }
+}
+</script>
+</body>
+</html>

@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 // Контроллер документов.
 // Обрабатывает все HTTP-запросы связанные с документами:
@@ -90,14 +91,30 @@ public class DocumentController {
 
     // Карточка документа с историей согласования.
     @GetMapping("/{id}")
-    public ResponseEntity<DocumentResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(documentService.findById(id));
+    public ResponseEntity<DocumentResponse> getById(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.findEntityByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(documentService.findById(id, currentUser));
     }
 
     // Расширенный поиск по любым критериям.
     // Все параметры необязательны — можно комбинировать любые.
     @GetMapping("/search")
-    public ResponseEntity<List<DocumentResponse>> search(DocumentSearchRequest request) {
-        return ResponseEntity.ok(documentService.search(request));
+    public ResponseEntity<List<DocumentResponse>> search(DocumentSearchRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.findEntityByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(documentService.search(request, currentUser));
+    }
+
+    @GetMapping("/{id}/can-process")
+    public ResponseEntity<Map<String, Boolean>> canProcess(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.findEntityByUsername(userDetails.getUsername());
+        boolean can = documentService.canProcess(id, currentUser);
+        return ResponseEntity.ok(Map.of("canProcess", can));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = userService.findEntityByUsername(userDetails.getUsername());
+        documentService.deleteDraft(id, currentUser);
+        return ResponseEntity.noContent().build();
     }
 }

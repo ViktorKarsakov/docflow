@@ -15,4 +15,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findAllByOrderByNameAsc();
 
     Optional<Department> findByName(String name);
+
+    List<Department> findByActiveTrueOrderByNameAsc();
 }

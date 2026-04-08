@@ -248,9 +248,22 @@ public class DocumentService {
     // Расширенный поиск по любым критериям.
     // Пустые поля в запросе просто игнорируются.
     @Transactional(readOnly = true)
-    public List<DocumentResponse> search(DocumentSearchRequest request) {
+    public List<DocumentResponse> search(DocumentSearchRequest request, User currentUser) {
+        boolean isAdminOrChief = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_CHIEF"));
+
+        if (isAdminOrChief) {
+            // Администратор и главврач — поиск по всей системе
+            return documentRepository.findAll(DocumentSpecification.build(request))
+                    .stream()
+                    .map(DocumentResponse::fromEntity)
+                    .toList();
+        }
+
+        // Обычный пользователь — только среди доступных ему документов.
         return documentRepository.findAll(DocumentSpecification.build(request))
                 .stream()
+                .filter(doc -> canView(doc, currentUser))
                 .map(DocumentResponse::fromEntity)
                 .toList();
     }
@@ -295,20 +308,59 @@ public class DocumentService {
 
     // Карточка документа с историей согласования
     @Transactional(readOnly = true)
-    public DocumentResponse findById(Long id) {
+    public DocumentResponse findById(Long id, User currentUser) {
         Document document = getDocumentOrThrow(id);
-        DocumentResponse response = DocumentResponse.fromEntity(document);
+
+        // Проверяем право на просмотр
+        checkCanView(document, currentUser);
 
         // Подгружаем шаги согласования
         List<ApprovalStepResponse> steps = approvalStepRepository.findByDocumentOrderByStepOrderAsc(document)
                 .stream()
                 .map(ApprovalStepResponse::fromEntity)
                 .toList();
+        DocumentResponse response = DocumentResponse.fromEntity(document);
         response.setApprovalSteps(steps);
         return response;
     }
 
+    @Transactional
+    public void deleteDraft(Long documentId, User currentUser) {
+        Document document = getDocumentOrThrow(documentId);
+
+        if (!document.getAuthor().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Удалить документ может только его автор");
+        }
+        if (document.getStatus() != Document.DocumentStatus.DRAFT) {
+            throw new RuntimeException("Удалить можно только черновик");
+        }
+
+        documentRepository.delete(document);
+        auditLogService.log(currentUser, "DOCUMENT_DELETED", "Document",
+                documentId.toString(), "Черновик удалён автором");
+    }
+
+    // Возвращает true если текущий пользователь может обработать активный шаг
+    @Transactional(readOnly = true)
+    public boolean canProcess(Long documentId, User currentUser) {
+        Document document = getDocumentOrThrow(documentId);
+        if (document.getStatus() != Document.DocumentStatus.ON_APPROVAL) return false;
+
+        ApprovalStep activeStep = approvalStepRepository
+                .findByDocumentAndStatus(document, ApprovalStep.StepStatus.ACTIVE)
+                .orElse(null);
+        if (activeStep == null) return false;
+
+        try {
+            checkCanProcess(activeStep, currentUser);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     // Вспомогательные методы
+
     // Активировать следующий PENDING-шаг и уведомить исполнителей.
     // Возвращает true если следующий шаг есть, false если маршрут завершён.
     private boolean activateNextStep(Document document) {
@@ -390,6 +442,51 @@ public class DocumentService {
     private void checkAuthor(Document document, User user) {
         if (!document.getAuthor().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён: вы не автор документа");
+        }
+    }
+
+    private boolean canView(Document document, User currentUser) {
+        // Автор всегда видит свой документ
+        if (document.getAuthor().getId().equals(currentUser.getId())) return true;
+
+        // Администратор и главврач видят все документы
+        boolean isAdminOrChief = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_CHIEF"));
+        if (isAdminOrChief) return true;
+
+        // Участник любого шага согласования (текущего или прошлого)
+        boolean isParticipant = approvalStepRepository.findByDocumentOrderByStepOrderAsc(document)
+                .stream()
+                .anyMatch(s ->
+                        (s.getAssigneeUser() != null
+                                && s.getAssigneeUser().getId().equals(currentUser.getId())) ||
+                                (s.getAssigneeDepartment() != null
+                                        && currentUser.getDepartment() != null
+                                        && s.getAssigneeDepartment().getId().equals(currentUser.getDepartment().getId())) ||
+                                (s.getAssignedRole() != null
+                                        && currentUser.getRoles().stream()
+                                        .anyMatch(r -> r.getName().equals(s.getAssignedRole().getName())))
+                );
+        if (isParticipant) return true;
+
+        // Заместитель видит персональные шаги замещаемого сотрудника.
+        // Если пользователь замещает кого-то — он должен видеть документы с персональными шагами этого сотрудника.
+        boolean isSubstituteParticipant = substitutionRepository.findWhomUserSubstitutes(currentUser, LocalDate.now())
+                .stream()
+                .anyMatch(sub -> approvalStepRepository.findByDocumentOrderByStepOrderAsc(document)
+                        .stream()
+                        .anyMatch(s -> s.getAssigneeUser() != null
+                                && s.getAssigneeUser().getId().equals(sub.getOriginalUser().getId()))
+                );
+        if (isSubstituteParticipant) return true;
+
+        return false;
+    }
+
+    // Проверить что пользователь имеет право видеть документ.
+    private void checkCanView(Document document, User currentUser) {
+        if (!canView(document, currentUser)) {
+            throw new RuntimeException("Доступ запрещён: у вас нет прав на просмотр этого документа");
         }
     }
 

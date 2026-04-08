@@ -20,7 +20,7 @@ public class DepartmentService {
     // Получить все отделы отсортированные по названию.
     @Transactional(readOnly = true)
     public List<Department> findAll() {
-        return departmentRepository.findAllByOrderByNameAsc();
+        return departmentRepository.findByActiveTrueOrderByNameAsc();
     }
 
     // Создать новый отдел.

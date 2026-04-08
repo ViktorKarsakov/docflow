@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Документ — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/documents.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Документ</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="/pages/documents-my.html">Документы</a>
+        <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+        <span class="breadcrumb-current" id="doc-title">Загрузка...</span>
+      </div>
+
+      <div id="main-content">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка принятия решения -->
+<div class="modal-overlay hidden" id="decision-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="decision-modal-title">Принять решение</span>
+      <button class="modal-close" onclick="hideModal('decision-modal')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Комментарий <span class="required" id="comment-required" style="display:none">*</span></label>
+        <textarea class="form-control" id="decision-comment" rows="4"
+                  placeholder="Добавьте комментарий..."></textarea>
+        <div class="form-hint" id="comment-hint">При отклонении комментарий обязателен</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('decision-modal')">Отмена</button>
+      <button class="btn" id="decision-confirm-btn" onclick="confirmDecision()">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка поручения -->
+<div class="modal-overlay hidden" id="task-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Выдать поручение</span>
+      <button class="modal-close" onclick="hideModal('task-modal')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Исполнитель <span class="required">*</span></label>
+        <div class="search-field" style="margin-bottom:0.5rem">
+          <i class="bi bi-search"></i>
+          <input type="text" class="form-control" id="task-user-search"
+                 placeholder="Начните вводить имя..." oninput="searchUsers(this.value)">
+        </div>
+        <select class="form-control" id="task-assignee" size="4" style="height:auto"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Название поручения <span class="required">*</span></label>
+        <input type="text" class="form-control" id="task-title" placeholder="Что нужно сделать?">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-control" id="task-description" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Срок <span class="required">*</span></label>
+        <input type="date" class="form-control" id="task-deadline">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('task-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="createTask()"><i class="bi bi-send"></i> Выдать</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/documents.js"></script>
+<script src="/js/tasks.js"></script>
+<script>
+let _doc = null;
+let _currentUser = null;
+let _decisionApproved = null;
+
+(async () => {
+  _currentUser = await Layout.init('Документ');
+  if (!_currentUser) return;
+
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id) { window.location.href = '/pages/documents-my.html'; return; }
+
+  try {
+    // ИСПРАВЛЕНО: загружаем документ и проверяем права параллельно.
+    // canProcess спрашиваем у бэкенда — он знает точно кто может обработать шаг,
+    // учитывает роли, отделы, замещение. Надёжнее чем угадывать на фронте.
+    const [doc, canProcessData] = await Promise.all([
+      API.documents.getById(id),
+      API.get(`/documents/${id}/can-process`).catch(() => ({ canProcess: false }))
+    ]);
+    _doc = doc;
+    renderPage(doc, canProcessData.canProcess);
+  } catch (e) {
+    document.getElementById('main-content').innerHTML =
+      `<div class="alert alert-danger"><i class="bi bi-exclamation-circle"></i>${e.message}</div>`;
+  }
+})();
+
+// canApprove приходит с бэкенда — не вычисляем на фронте
+function renderPage(doc, canApprove) {
+  const isAuthor = doc.authorId === _currentUser.id;
+
+  document.getElementById('doc-title').textContent = doc.title;
+  document.getElementById('topbar-title').textContent = doc.title;
+
+  const stepTypeIcon = { APPROVAL: 'bi-check2', SIGNATURE: 'bi-pen', EXECUTION: 'bi-gear', RESOLUTION: 'bi-chat-left-dots' };
+  const statusClass  = { PENDING: 'pending', ACTIVE: 'active', APPROVED: 'approved', REJECTED: 'rejected', SKIPPED: 'skipped' };
+
+  const stepsHtml = (doc.approvalSteps || []).length
+    ? `<div class="approval-timeline">
+        ${(doc.approvalSteps || []).map(s => `
+          <div class="approval-step">
+            <div class="step-dot ${statusClass[s.status] || 'pending'}">
+              <i class="bi ${stepTypeIcon[s.stepType] || 'bi-check2'}"></i>
+            </div>
+            <div class="step-content">
+              <div class="step-name">${s.stepName}</div>
+              <div class="step-meta">
+                ${s.assignedRoleDisplayName || ''}
+                ${s.assigneeDepartmentName ? ` · ${s.assigneeDepartmentName}` : ''}
+                ${s.assigneeUserFullName ? ` · ${s.assigneeUserFullName}` : ''}
+                · ${s.statusDisplayName}
+                ${s.processedByFullName ? ` · ${s.processedByFullName}` : ''}
+                ${s.processedAt ? ` · ${formatDateTime(s.processedAt)}` : ''}
+              </div>
+              ${s.comment ? `<div class="step-comment">${s.comment}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>`
+    : '<p class="text-muted" style="font-size:0.85rem">Документ ещё не отправлялся на согласование</p>';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="document-view">
+      <!-- Левая колонка: содержание -->
+      <div class="document-main">
+        ${doc.rejectionReason && doc.status === 'REJECTED' ? `
+          <div class="rejection-notice">
+            <strong><i class="bi bi-x-circle"></i> Документ отклонён</strong>
+            ${doc.rejectionReason}
+          </div>
+        ` : ''}
+
+        <div class="document-content-block">
+          <div class="document-content-header">
+            <div class="document-type-label">${doc.documentTypeName}</div>
+            <div class="document-title-large">${doc.title}</div>
+          </div>
+          <div class="document-content-body">${doc.content}</div>
+        </div>
+
+        <!-- История согласования -->
+        <div class="card" style="margin-top:1.25rem">
+          <div class="card-header">
+            <span class="card-title"><i class="bi bi-clock-history" style="color:var(--blue)"></i> История согласования</span>
+          </div>
+          <div class="card-body">${stepsHtml}</div>
+        </div>
+      </div>
+
+      <!-- Правая колонка -->
+      <div class="document-sidebar">
+        <!-- Статус и информация -->
+        <div class="doc-info-card">
+          <div class="doc-info-row">
+            <span class="doc-info-label">Статус</span>
+            <span class="doc-info-value">${docStatusBadge(doc.status)}</span>
+          </div>
+          ${doc.registrationNumber ? `
+          <div class="doc-info-row">
+            <span class="doc-info-label">Рег. номер</span>
+            <span class="doc-info-value"><span class="doc-reg-number">${doc.registrationNumber}</span></span>
+          </div>` : ''}
+          <div class="doc-info-row">
+            <span class="doc-info-label">Автор</span>
+            <span class="doc-info-value">${doc.authorFullName}</span>
+          </div>
+          <div class="doc-info-row">
+            <span class="doc-info-label">Создан</span>
+            <span class="doc-info-value">${formatDate(doc.createdAt)}</span>
+          </div>
+          ${doc.submittedAt ? `
+          <div class="doc-info-row">
+            <span class="doc-info-label">Отправлен</span>
+            <span class="doc-info-value">${formatDateTime(doc.submittedAt)}</span>
+          </div>` : ''}
+          ${doc.deadline ? `
+          <div class="doc-info-row">
+            <span class="doc-info-label">Дедлайн</span>
+            <span class="doc-info-value ${doc.overdue ? 'text-danger fw-600' : ''}">${formatDate(doc.deadline)}${doc.overdue ? ' <i class="bi bi-exclamation-triangle"></i>' : ''}</span>
+          </div>` : ''}
+          ${doc.addressee ? `
+          <div class="doc-info-row">
+            <span class="doc-info-label">Адресат</span>
+            <span class="doc-info-value">${doc.addressee}</span>
+          </div>` : ''}
+        </div>
+
+        <!-- Блок решения — только если бэкенд подтвердил право текущего пользователя -->
+        ${canApprove ? `
+        <div class="decision-card" style="margin-bottom:1rem">
+          <div class="decision-header">
+            <i class="bi bi-hand-index-thumb"></i> Требуется ваше решение
+          </div>
+          <div class="decision-body">
+            <div class="decision-buttons">
+              <button class="btn btn-success" onclick="openDecision(true)">
+                <i class="bi bi-check-lg"></i> Согласовать
+              </button>
+              <button class="btn btn-danger" onclick="openDecision(false)">
+                <i class="bi bi-x-lg"></i> Отклонить
+              </button>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Действия автора -->
+        <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem">
+          ${(doc.status === 'DRAFT' || doc.status === 'REJECTED') && isAuthor ? `
+          <button class="btn btn-primary" onclick="submitDoc()">
+            <i class="bi bi-send"></i> Отправить на согласование
+          </button>` : ''}
+          ${doc.status === 'DRAFT' && isAuthor ? `
+          <button class="btn btn-ghost" style="color:var(--danger)" onclick="deleteDoc()">
+            <i class="bi bi-trash"></i> Удалить черновик
+          </button>` : ''}
+          ${doc.status === 'ON_APPROVAL' && isAuthor ? `
+          <button class="btn btn-secondary" onclick="withdrawDoc()">
+            <i class="bi bi-arrow-counterclockwise"></i> Отозвать
+          </button>` : ''}
+        </div>
+
+        <!-- Поручение -->
+        <div>
+          <button class="btn btn-ghost" style="width:100%" onclick="showModal('task-modal')">
+            <i class="bi bi-plus-circle"></i> Выдать поручение
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('task-deadline').min = new Date().toISOString().split('T')[0];
+  document.getElementById('task-title').value = `По документу: ${doc.title}`;
+}
+
+function openDecision(approved) {
+  _decisionApproved = approved;
+  const btn = document.getElementById('decision-confirm-btn');
+  const title = document.getElementById('decision-modal-title');
+  const req = document.getElementById('comment-required');
+
+  if (approved) {
+    title.textContent = 'Согласование документа';
+    btn.className = 'btn btn-success';
+    btn.innerHTML = '<i class="bi bi-check-lg"></i> Согласовать';
+    req.style.display = 'none';
+  } else {
+    title.textContent = 'Отклонение документа';
+    btn.className = 'btn btn-danger';
+    btn.innerHTML = '<i class="bi bi-x-lg"></i> Отклонить';
+    req.style.display = '';
+  }
+
+  document.getElementById('decision-comment').value = '';
+  showModal('decision-modal');
+}
+
+async function confirmDecision() {
+  const comment = document.getElementById('decision-comment').value.trim();
+  const ok = await Documents.processDecision(_doc.id, _decisionApproved, comment);
+  if (ok) {
+    hideModal('decision-modal');
+    setTimeout(() => window.location.reload(), 800);
+  }
+}
+
+async function submitDoc() {
+  const ok = await Documents.submitDocument(_doc.id);
+  if (ok) setTimeout(() => window.location.reload(), 800);
+}
+
+// Удалить черновик — только автор, только статус DRAFT
+async function deleteDoc() {
+  confirmAction('Удалить черновик? Это действие нельзя отменить.', async () => {
+    try {
+      await API.delete(`/documents/${_doc.id}`);
+      showToast('Черновик удалён', 'info');
+      setTimeout(() => window.location.href = '/pages/documents-my.html', 800);
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  });
+}
+
+async function withdrawDoc() {
+  confirmAction('Отозвать документ с согласования?', async () => {
+    const ok = await Documents.withdraw(_doc.id);
+    if (ok) setTimeout(() => window.location.reload(), 800);
+  });
+}
+
+const searchUsers = debounce(async (query) => {
+  if (query.length < 2) return;
+  const users = await API.users.search(query).catch(() => []);
+  const select = document.getElementById('task-assignee');
+  select.innerHTML = users.map(u =>
+    `<option value="${u.id}">${u.fullName} — ${u.departmentName || u.position}</option>`
+  ).join('');
+}, 300);
+
+async function createTask() {
+  const assigneeEl = document.getElementById('task-assignee');
+  const assignedToId = assigneeEl.value ? Number(assigneeEl.value) : null;
+  const title = document.getElementById('task-title').value.trim();
+  const deadline = document.getElementById('task-deadline').value;
+
+  if (!assignedToId) { showToast('Выберите исполнителя', 'error'); return; }
+  if (!title)        { showToast('Введите название поручения', 'error'); return; }
+  if (!deadline)     { showToast('Укажите срок', 'error'); return; }
+
+  const ok = await Tasks.createTask({
+    documentId:   _doc.id,
+    title,
+    description:  document.getElementById('task-description').value || null,
+    assignedToId,
+    deadline,
+  });
+  if (ok) hideModal('task-modal');
+}
+</script>
+</body>
+</html>
