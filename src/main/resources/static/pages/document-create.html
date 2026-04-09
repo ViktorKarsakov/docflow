@@ -129,10 +129,24 @@
 let _docTypes = [];
 let _routeTemplates = [];
 
+// Человекочитаемые названия типов шагов
+const stepTypeLabel = {
+  APPROVAL:   'Согласование',
+  SIGNATURE:  'Подпись',
+  EXECUTION:  'Исполнение',
+  RESOLUTION: 'Резолюция',
+};
+
+const stepTypeIcon = {
+  APPROVAL:   'bi-check2',
+  SIGNATURE:  'bi-pen',
+  EXECUTION:  'bi-gear',
+  RESOLUTION: 'bi-chat-left-dots',
+};
+
 (async () => {
   await Layout.init('Новый документ');
 
-  // Загружаем типы документов и шаблоны маршрутов
   [_docTypes, _routeTemplates] = await Promise.all([
     API.documentTypes.getAll().catch(() => []),
     API.routeTemplates.getAll().catch(() => []),
@@ -157,19 +171,28 @@ function onTypeChange() {
 
   if (template && template.steps?.length) {
     card.style.display = '';
-    const stepTypeIcon  = { APPROVAL: 'bi-check2', SIGNATURE: 'bi-pen', EXECUTION: 'bi-gear', RESOLUTION: 'bi-chat-left-dots' };
-    const stepTypeLabel = { APPROVAL: 'Согласование', SIGNATURE: 'Подпись', EXECUTION: 'Исполнение', RESOLUTION: 'Резолюция' };
     preview.innerHTML = template.steps
       .sort((a, b) => a.stepOrder - b.stepOrder)
-      .map((s, i) => `
-        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;${i < template.steps.length - 1 ? 'border-bottom:1px solid var(--border-light)' : ''}">
-          <span style="width:20px;height:20px;background:var(--blue-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:var(--blue);flex-shrink:0">${s.stepOrder}</span>
-          <div>
-            <div style="font-size:0.8rem;font-weight:500">${s.stepName}</div>
-            <div style="font-size:0.72rem;color:var(--text-muted)">${stepTypeLabel[s.stepType] || s.stepType}</div>
+      .map((s, i) => {
+        // ИСПРАВЛЕНО: показываем исполнителя — роль, отдел или конкретного сотрудника
+        const assignee = s.assignedRoleDisplayName
+          || s.assignedDepartmentName
+          || s.assignedUserFullName
+          || '—';
+
+        return `
+          <div style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.5rem 0;${i < template.steps.length - 1 ? 'border-bottom:1px solid var(--border-light)' : ''}">
+            <span style="width:22px;height:22px;background:var(--blue-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:var(--blue);flex-shrink:0;margin-top:1px">${s.stepOrder}</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:600;color:var(--text)">${s.stepName}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:1px">
+                <i class="bi ${stepTypeIcon[s.stepType] || 'bi-check2'}" style="margin-right:3px"></i>
+                ${stepTypeLabel[s.stepType] || s.stepType} · ${assignee}
+              </div>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
   } else if (typeId) {
     card.style.display = '';
     preview.innerHTML = '<div class="text-muted" style="font-size:0.82rem"><i class="bi bi-exclamation-triangle text-warning"></i> Маршрут для этого типа не настроен. Обратитесь к администратору.</div>';

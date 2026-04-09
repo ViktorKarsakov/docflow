@@ -15,6 +15,9 @@ public class RouteTemplateStepDto {
     private Long assignedRoleId;
     private Long assignedDepartmentId;
     private Long assignedUserId;
+    private String assignedRoleDisplayName;
+    private String assignedDepartmentName;
+    private String assignedUserFullName;
 
     public static RouteTemplateStepDto fromEntity(RouteTemplateStep s) {
         return RouteTemplateStepDto.builder()
@@ -25,6 +28,9 @@ public class RouteTemplateStepDto {
                 .assignedRoleId(s.getAssignedRole() != null ? s.getAssignedRole().getId() : null)
                 .assignedDepartmentId(s.getAssignedDepartment() != null ? s.getAssignedDepartment().getId() : null)
                 .assignedUserId(s.getAssignedUser() != null ? s.getAssignedUser().getId() : null)
+                .assignedRoleDisplayName(s.getAssignedRole() != null ? s.getAssignedRole().getDisplayName() : null)
+                .assignedDepartmentName(s.getAssignedDepartment() != null ? s.getAssignedDepartment().getName() : null)
+                .assignedUserFullName(s.getAssignedUser() != null ? s.getAssignedUser().getFullName() : null)
                 .build();
     }
 }

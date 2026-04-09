@@ -28,7 +28,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Типы документов</div>
-          <div class="page-subtitle">Управление видами документов и их префиксами</div>
+          <div class="page-subtitle">Управление видами документов и их маршрутами согласования</div>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-primary" onclick="DocTypesAdmin.openCreate()">
@@ -41,10 +41,10 @@
         <div class="table-wrap">
           <table class="table">
             <thead>
-              <tr><th>Название</th><th>Код</th><th>Префикс</th><th>Статус</th><th></th></tr>
+              <tr><th>Название</th><th>Код</th><th>Префикс</th><th>Маршрут</th><th>Статус</th><th></th></tr>
             </thead>
             <tbody id="doctypes-table-body">
-              <tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>
+              <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -92,11 +92,19 @@
         </div>
       </form>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="hideModal('doctype-modal')">Отмена</button>
-      <button class="btn btn-primary" onclick="DocTypesAdmin.save()">
-        <i class="bi bi-floppy"></i> Сохранить
-      </button>
+    <div class="modal-footer" style="justify-content:space-between">
+      <!-- ДОБАВЛЕНО: кнопка настройки маршрута — появляется только при редактировании -->
+      <div id="route-btn-wrap" style="display:none">
+        <button class="btn btn-secondary" onclick="DocTypesAdmin.openRouteEditor()">
+          <i class="bi bi-diagram-3"></i> Настроить маршрут
+        </button>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-secondary" onclick="hideModal('doctype-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="DocTypesAdmin.save()">
+          <i class="bi bi-floppy"></i> Сохранить
+        </button>
+      </div>
     </div>
   </div>
 </div>

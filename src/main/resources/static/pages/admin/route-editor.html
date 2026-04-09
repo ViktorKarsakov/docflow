@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Маршрут согласования — ЭДО</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    /* Список шагов маршрута */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .step-item:hover {
+      border-color: var(--blue-light);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      background: var(--blue-pale);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--blue);
+      flex-shrink: 0;
+      font-family: var(--font-head);
+    }
+
+    .step-info { flex: 1; min-width: 0; }
+    .step-name {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text);
+    }
+    .step-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .step-type-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .step-type-APPROVAL   { background: var(--info-bg);    color: var(--info); }
+    .step-type-SIGNATURE  { background: var(--gold-light);  color: var(--gold); }
+    .step-type-EXECUTION  { background: var(--warning-bg);  color: var(--warning); }
+    .step-type-RESOLUTION { background: var(--neutral-bg);  color: var(--neutral); }
+
+    .step-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+
+    /* Стрелка между шагами */
+    .step-arrow {
+      display: flex;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin: -0.1rem 0;
+    }
+
+    /* Блок добавления шага */
+    .add-step-card {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      background: var(--surface-alt);
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-area">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Маршрут согласования</span>
+      <div class="topbar-actions">
+        <a href="/pages/notifications.html" class="notif-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <!-- Хлебные крошки -->
+      <div class="breadcrumb">
+        <a href="/pages/admin/doc-types.html">Типы документов</a>
+        <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+        <span class="breadcrumb-current" id="bc-doctype">Загрузка...</span>
+        <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+        <span class="breadcrumb-current">Маршрут согласования</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title" id="page-title">Маршрут согласования</div>
+          <div class="page-subtitle" id="page-subtitle">Загрузка...</div>
+        </div>
+        <div class="page-header-actions">
+          <a href="/pages/admin/doc-types.html" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> К типам документов
+          </a>
+          <button class="btn btn-primary" onclick="RouteEditor.save()">
+            <i class="bi bi-floppy"></i> Сохранить маршрут
+          </button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;align-items:start">
+
+        <!-- Список шагов -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title"><i class="bi bi-list-ol" style="color:var(--blue)"></i> Шаги маршрута</span>
+              <span class="text-muted" style="font-size:0.8rem" id="steps-count"></span>
+            </div>
+            <div class="card-body">
+              <div id="steps-list" class="steps-list">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Форма добавления шага -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="step-form-title">Новый шаг</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Название шага <span class="required">*</span></label>
+                <input type="text" class="form-control" id="step-name"
+                       placeholder="Например: Согласование с ИАО">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Тип шага</label>
+                <select class="form-control" id="step-type">
+                  <option value="APPROVAL">Согласование</option>
+                  <option value="SIGNATURE">Подпись</option>
+                  <option value="EXECUTION">Исполнение</option>
+                  <option value="RESOLUTION">Резолюция</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Назначить <span class="required">*</span></label>
+                <select class="form-control" id="assign-type" onchange="RouteEditor.onAssignTypeChange()">
+                  <option value="role">По роли</option>
+                  <option value="department">Отделу</option>
+                  <option value="user">Конкретному сотруднику</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="field-role">
+                <label class="form-label">Роль <span class="required">*</span></label>
+                <select class="form-control" id="step-role">
+                  <option value="">— Выберите роль —</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="field-dept" style="display:none">
+                <label class="form-label">Отдел <span class="required">*</span></label>
+                <select class="form-control" id="step-dept">
+                  <option value="">— Выберите отдел —</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="field-user" style="display:none">
+                <label class="form-label">Сотрудник <span class="required">*</span></label>
+                <select class="form-control" id="step-user">
+                  <option value="">— Выберите сотрудника —</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary" style="width:100%" onclick="RouteEditor.addStep()">
+                <i class="bi bi-plus-lg"></i> <span id="add-btn-label">Добавить шаг</span>
+              </button>
+              <button class="btn btn-ghost" style="width:100%;margin-top:0.25rem;display:none" id="cancel-edit-btn" onclick="RouteEditor.cancelEdit()">
+                Отмена
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-info" style="margin-top:1rem">
+            <i class="bi bi-info-circle"></i>
+            <div>Шаги выполняются последовательно сверху вниз. Порядок можно изменить кнопками ↑↓.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/admin/route-editor.js"></script>
+<script>
+(async () => {
+  const user = await Layout.init('Маршрут');
+  if (!user) return;
+  if (!Auth.hasRole(user, 'ROLE_ADMIN')) {
+    window.location.href = '/pages/dashboard.html';
+    return;
+  }
+
+  const typeId = new URLSearchParams(window.location.search).get('typeId');
+  if (!typeId) {
+    window.location.href = '/pages/admin/doc-types.html';
+    return;
+  }
+
+  await RouteEditor.init(Number(typeId));
+})();
+</script>
+</body>
+</html>

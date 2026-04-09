@@ -45,7 +45,7 @@ public class DataInitialize implements ApplicationRunner {
         log.info("Запуск инициализации начальных данных...");
         initRoles();
         initDepartments();
-        initDocumentTypes();
+        //initDocumentTypes();
         initAdminUser();
         log.info("Инициализация завершена. Войдите как 'admin' и настройте маршруты согласования.");
     }
@@ -104,7 +104,7 @@ public class DataInitialize implements ApplicationRunner {
         return department;
     }
 
-    // Типы документов
+    // Типы документов (пока что не используется)
     private void initDocumentTypes() {
         if (documentTypeRepository.count() > 0) return;
 
